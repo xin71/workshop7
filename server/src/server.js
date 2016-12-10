@@ -582,22 +582,13 @@ app.delete('/feeditem/:feeditemid', function(req, res) {
       var feedItemId = new ObjectID(req.params.feeditemid);
       if (fromUser === author) {
         comment.likeCounter = [];
+        comment.author = new ObjectID(author);
           db.collection('feedItems').updateOne({_id:feedItemId},
-            {
-              $push:{
-                comments:{
-                  $each:[comment],
-                  $position:0
-                }
-              }
-            },
+            {$push:{comments: comment}},
               function(err) {
                 if(err) {
                   sendDatabaseError(res,err);
-                }else {
-                  res.status(201);
-                  res.set('Location', '/feeditem/' + feedItemId + "/comments/" + 0);
-                  // Return a resolved version of the feed item.
+                }else{
                   getFeedItem(feedItemId,function(err,feedItem){
                     if(err) {
                       sendDatabaseError(res,err);
@@ -618,17 +609,15 @@ app.delete('/feeditem/:feeditemid', function(req, res) {
       var fromUser = getUserIdFromToken(req.get('Authorization'));
       var userId = req.params.userid;
       var commentIdx = parseInt(req.params.commentindex, 10);
-      if (fromUser === userId){
+      if (fromUser === userId) {
         db.collection('feedItems').updateOne({_id:feedItemId},
-        {
-          $push: {['comments.'+ commentIdx +'.likeCounter']:new ObjectID(userId)}
-        },
+        {$push: {['comments.'+ commentIdx +'.likeCounter']:new ObjectID(userId)}},
         function(err){
-          if(err){
+          if(err) {
             sendDatabaseError(res,err);
           }else{
             getFeedItem(feedItemId,function(err,feedItem){
-              if(err){
+              if(err) {
                 console.log("Error for retriving");
                 sendDatabaseError(res,err);
               }else{
@@ -655,17 +644,15 @@ app.delete('/feeditem/:feeditemid', function(req, res) {
       }
     });
 
-    app.delete('/feeditem/:feeditemid/comments/:commentindex/likelist/:userid', function(req, res) {
-      var feedItemId = new ObjectID(req.params.feeditemid);
-      var fromUser = getUserIdFromToken(req.get('Authorization'));
-      var userId = req.params.userid;
-      var commentIdx = parseInt(req.params.commentindex, 10);
-  // Only a user can mess with their own like.
-  if (fromUser === userId){
-    db.collection('feedItems').updateOne({_id:feedItemId},
-      {
-        $pull:{['comments.'+ commentIdx +'.likeCounter']:new ObjectID(userId)}
-      },function(err){
+  app.delete('/feeditem/:feeditemid/comments/:commentindex/likelist/:userid', function(req, res) {
+    var feedItemId = new ObjectID(req.params.feeditemid);
+    var fromUser = getUserIdFromToken(req.get('Authorization'));
+    var userId = req.params.userid;
+    var commentIdx = parseInt(req.params.commentindex, 10);
+    // Only a user can mess with their own like.
+    if (fromUser === userId){
+      db.collection('feedItems').updateOne({_id:feedItemId},
+      {$pull:{['comments.'+ commentIdx +'.likeCounter']:new ObjectID(userId)}},function(err){
         if(err) {
           console.log("Error for pull");
           sendDatabaseError(res,err);
